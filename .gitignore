@@ -1,0 +1,9 @@
+﻿src/dist/
+src/*.egg-info/
+**/__pycache__/
+.svn/
+.vscode
+examples/*.log
+testing/output/*
+testing/output2/*
+testing/testdata/*.txt.*

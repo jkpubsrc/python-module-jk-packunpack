@@ -1,0 +1,64 @@
+{
+	"magic": {
+		"magic": "packageinfo",
+		"version": 2,
+	},
+	"meta": {
+		"name": "jk_packunpack",
+		"version": "0.2020.11.11",
+		"packageClass": "python-module",
+		"language": "python3",
+		"development_status": "stable",
+		"license": "proprietary",
+		"keywords": [
+			"..."
+		],
+		"description": "Helper module to create or unpack tar archives, compress or uncompress files.",
+		"authors": [
+			{
+				"name": "Jürgen Knauth",
+				"email": "pubsrc@binary-overflow.de"
+			}
+		],
+	},
+	"requirements": {
+		"python_packages": [
+			"jk_simpleexec",
+			"jk_logging",
+		],
+		"python_packages_dev": [
+		],
+		"system_apt_packages": [
+		],
+	},
+	"source": {
+		"packages": [
+			"jk_packunpack"
+		],
+		"extra_data_files": [
+		],
+		"extra_binary_files": [
+		]
+	},
+	"documentation": [
+		/*
+		"wiki": {
+			"page": "DevDocs:jk_packunpack"
+		}
+		*/
+	],
+	"repositories": [
+		{
+			"type": "github",
+			"user": "jkpubsrc",
+			"project": "........",
+			"devon_publish": false
+		},
+		{
+			"type": "pypi",
+			"project": "........",
+			"devon_publish": false
+		}
+	],
+}
+
