@@ -1,6 +1,6 @@
 
 import os
-
+import typing
 import tarfile
 import gzip
 import bz2
@@ -8,6 +8,10 @@ import lzma
 
 import jk_simpleexec
 import jk_logging
+import jk_utils
+
+from .Spooler import Spooler
+from .SpoolInfo import SpoolInfo
 
 
 
@@ -18,11 +22,85 @@ class Packer(object):
 
 	_TAR_PATH = "/bin/tar"
 
+	################################################################################################################################
+	## Static Helper Methods
+	################################################################################################################################
+
+	@staticmethod
+	def _compressGZip(inFilePath:str, outFilePath:str, chModValueI:int = None):
+		assert inFilePath != outFilePath
+
+		with open(inFilePath, "rb") as fin:
+			if chModValueI is None:
+				with gzip.open(outFilePath, "wb") as fout:
+					Spooler._spool(fin, fout)
+			else:
+				fdesc = os.open(outFilePath, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, chModValueI)
+				with open(fdesc, "wb") as fout2:
+					with gzip.open(fout2, "wb") as fout:
+						Spooler._spool(fin, fout)
+	#
+
+	@staticmethod
+	def _compressBZip2(inFilePath:str, outFilePath:str, chModValueI:int = None):
+		assert inFilePath != outFilePath
+
+		with open(inFilePath, "rb") as fin:
+			if chModValueI is None:
+				with bz2.open(outFilePath, "wb") as fout:
+					Spooler._spool(fin, fout)
+			else:
+				fdesc = os.open(outFilePath, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, chModValueI)
+				with open(fdesc, "wb") as fout2:
+					with bz2.open(fout2, "wb") as fout:
+						Spooler._spool(fin, fout)
+	#
+
+	@staticmethod
+	def _compressXZ(inFilePath:str, outFilePath:str, chModValueI:int = None):
+		assert inFilePath != outFilePath
+
+		with open(inFilePath, "rb") as fin:
+			if chModValueI is None:
+				with lzma.open(outFilePath, "wb") as fout:
+					Spooler._spool(fin, fout)
+			else:
+				fdesc = os.open(outFilePath, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, chModValueI)
+				with open(fdesc, "wb") as fout2:
+					with lzma.open(fout2, "wb") as fout:
+						Spooler._spool(fin, fout)
+	#
+
+	#
+	# @return		str name
+	# @return		str ext
+	# @return		callable m
+	#
+	@staticmethod
+	def _getCompressionParams(compression:str):
+		assert isinstance(compression, str)
+
+		if compression in [ "gz", "gzip" ]:
+			return "gzip", ".gz", Packer._compressGZip
+		elif compression in [ "bz2", "bzip2" ]:
+			return "bzip2", ".bz2", Packer._compressBZip2
+		elif compression in [ "xz" ]:
+			return "xz", ".xz", Packer._compressXZ
+		else:
+			raise Exception("Unknown compression: " + repr(compression))
+	#
+
+	################################################################################################################################
+	## Static Public Methods
+	################################################################################################################################
+
 	@staticmethod
 	def tarDir(srcDirPath:str, destTarFile:str, log:jk_logging.AbstractLogger):
 		assert isinstance(srcDirPath, str)
 		assert isinstance(destTarFile, str)
 		assert isinstance(log, jk_logging.AbstractLogger)
+
+		# ----
 
 		with log.descend("Packing " + repr(srcDirPath) + " ...") as log2:
 			srcDirPath = os.path.abspath(srcDirPath)
@@ -50,24 +128,13 @@ class Packer(object):
 		assert isinstance(bDeleteOriginal, bool)
 		assert isinstance(log, jk_logging.AbstractLogger)
 
+		# ----
+
 		with log.descend("Compressing " + repr(filePath) + " ...") as log2:
 			filePath = os.path.abspath(filePath)
 			assert os.path.isfile(filePath)
 
-			if compression in [ "gz", "gzip" ]:
-				name = "gzip"
-				ext = ".gz"
-				m = Packer._compressGZip
-			elif compression in [ "bz2", "bzip2" ]:
-				name = "bzip2"
-				ext = ".bz2"
-				m = Packer._compressBZip2
-			elif compression in [ "xz" ]:
-				name = "xz"
-				ext = ".xz"
-				m = Packer._compressXZ
-			else:
-				raise Exception("Unknown compression: " + repr(compression))
+			name, ext, m = Packer._getCompressionParams(compression)
 
 			log.notice("Packing with " + name + " ...")
 
@@ -94,46 +161,49 @@ class Packer(object):
 	#
 
 	@staticmethod
-	def _compressGZip(inFilePath:str, outFilePath:str):
-		assert inFilePath != outFilePath
+	def compressFile2(filePath:str, toFilePath:typing.Union[str,None], compression:str, bDeleteOriginal:bool, chModValue:typing.Union[int,jk_utils.ChModValue,None], log:jk_logging.AbstractLogger) -> SpoolInfo:
+		assert isinstance(filePath, str)
+		if toFilePath is not None:
+			assert isinstance(toFilePath, str)
+		assert isinstance(compression, str)
+		assert isinstance(bDeleteOriginal, bool)
+		if chModValue is not None:
+			if isinstance(chModValue, int):
+				chModValueI = chModValue
+			else:
+				assert isinstance(chModValue, jk_utils.ChModValue)
+				chModValueI = int(chModValue)
+		assert isinstance(log, jk_logging.AbstractLogger)
 
-		with open(inFilePath, "rb") as fin:
-			with gzip.open(outFilePath, "wb") as fout:
-				Packer._spool(fin, fout)
-	#
+		# ----
 
-	@staticmethod
-	def _compressBZip2(inFilePath:str, outFilePath:str):
-		assert inFilePath != outFilePath
+		with log.descend("Compressing " + repr(filePath) + " ...") as log2:
+			filePath = os.path.abspath(filePath)
+			assert os.path.isfile(filePath)
 
-		with open(inFilePath, "rb") as fin:
-			with bz2.open(outFilePath, "wb") as fout:
-				Packer._spool(fin, fout)
-	#
+			compressionName, compressionFileExt, m = Packer._getCompressionParams(compression)
 
-	@staticmethod
-	def _compressXZ(inFilePath:str, outFilePath:str):
-		assert inFilePath != outFilePath
+			log.notice("Packing with " + compressionName + " ...")
 
-		with open(inFilePath, "rb") as fin:
-			with lzma.open(outFilePath, "wb") as fout:
-				Packer._spool(fin, fout)
-	#
+			orgFileSize = os.path.getsize(filePath)
 
-	@staticmethod
-	def _spool(fin, fout):
-		assert fin
-		assert fout
+			if toFilePath is None:
+				toFilePath = filePath + compressionFileExt
 
-		lastBlockSize = 65536
-		totalLength = 0
+			# TODO: check if target file already exists
 
-		for dataChunk in iter(lambda: fin.read(65536), b""):
-			assert lastBlockSize == 65536
-			lastBlockSize = len(dataChunk)
-			assert lastBlockSize > 0
-			totalLength += len(dataChunk)
-			fout.write(dataChunk)
+			m(filePath, toFilePath, chModValueI)
+
+			resultFileSize = os.path.getsize(toFilePath)
+
+			if bDeleteOriginal:
+				if os.path.isfile(filePath):
+					os.unlink(filePath)
+			else:
+				if not os.path.isfile(filePath):
+					raise Exception("Implementation error!")
+
+			return SpoolInfo(filePath, toFilePath, compressionName, compressionFileExt, orgFileSize, resultFileSize)
 	#
 
 #

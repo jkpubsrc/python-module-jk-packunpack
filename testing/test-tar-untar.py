@@ -10,15 +10,13 @@ from jk_packunpack import *
 
 
 
-log = jk_logging.ConsoleLogger.create(logMsgFormatter=jk_logging.COLOR_LOG_MESSAGE_FORMATTER)
+with jk_logging.wrapMain() as log:
 
+	Packer.tarDir("testdata", "output/testdata.tar", log)
 
+	Unpacker.untarToDir("output/testdata.tar", "output2", log)
 
-Packer.tarDir("testdata", "output/testdata.tar", log)
-
-Unpacker.untarToDir("output/testdata.tar", "output2", log)
-
-log.success("Success.")
+	log.success("Success.")
 
 
 

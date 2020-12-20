@@ -8,7 +8,10 @@ import lzma
 
 import jk_simpleexec
 import jk_logging
+import jk_utils
 
+from .Spooler import Spooler
+from .SpoolInfo import SpoolInfo
 
 
 
@@ -18,11 +21,48 @@ class Unpacker(object):
 
 	_TAR_PATH = "/bin/tar"
 
+	################################################################################################################################
+	## Static Helper Methods
+	################################################################################################################################
+
+	@staticmethod
+	def _uncompressGZip(inFilePath:str, outFilePath:str):
+		assert inFilePath != outFilePath
+
+		with gzip.open(inFilePath, "rb") as fin:
+			with open(outFilePath, "wb") as fout:
+				Spooler._spool(fin, fout)
+	#
+
+	@staticmethod
+	def _uncompressBZip2(inFilePath:str, outFilePath:str):
+		assert inFilePath != outFilePath
+
+		with bz2.open(inFilePath, "rb") as fin:
+			with open(outFilePath, "wb") as fout:
+				Spooler._spool(fin, fout)
+	#
+
+	@staticmethod
+	def _uncompressXZ(inFilePath:str, outFilePath:str):
+		assert inFilePath != outFilePath
+
+		with lzma.open(inFilePath, "rb") as fin:
+			with open(outFilePath, "wb") as fout:
+				Spooler._spool(fin, fout)
+	#
+
+	################################################################################################################################
+	## Static Public Methods
+	################################################################################################################################
+
 	@staticmethod
 	def untarToDir(srcTarFile:str, destDirPath:str, log:jk_logging.AbstractLogger):
 		assert isinstance(srcTarFile, str)
 		assert isinstance(destDirPath, str)
 		assert isinstance(log, jk_logging.AbstractLogger)
+
+		# ----
 
 		with log.descend("Unpacking " + repr(srcTarFile) + " ...") as log2:
 			srcTarFile = os.path.abspath(srcTarFile)
@@ -66,11 +106,14 @@ class Unpacker(object):
 	#
 
 	@staticmethod
-	def uncompressFile(filePath:str, toFilePath:str, bDeleteOriginal:bool, log:jk_logging.AbstractLogger) -> str:
+	def uncompressFile(filePath:str, toFilePath:typing.Union[str,None], bDeleteOriginal:bool, log:jk_logging.AbstractLogger) -> str:
 		assert isinstance(filePath, str)
-		assert isinstance(toFilePath, str)
+		if toFilePath is not None:
+			assert isinstance(toFilePath, str)
 		assert isinstance(bDeleteOriginal, bool)
 		assert isinstance(log, jk_logging.AbstractLogger)
+
+		# ----
 
 		with log.descend("Uncompressing " + repr(filePath) + " ...") as log2:
 			filePath = os.path.abspath(filePath)
@@ -112,49 +155,6 @@ class Unpacker(object):
 					raise Exception("Implementation error!")
 
 			return toFilePath
-	#
-
-	@staticmethod
-	def _uncompressGZip(inFilePath:str, outFilePath:str):
-		assert inFilePath != outFilePath
-
-		with gzip.open(inFilePath, "rb") as fin:
-			with open(outFilePath, "wb") as fout:
-				Unpacker._spool(fin, fout)
-	#
-
-	@staticmethod
-	def _uncompressBZip2(inFilePath:str, outFilePath:str):
-		assert inFilePath != outFilePath
-
-		with bz2.open(inFilePath, "rb") as fin:
-			with open(outFilePath, "wb") as fout:
-				Unpacker._spool(fin, fout)
-	#
-
-	@staticmethod
-	def _uncompressXZ(inFilePath:str, outFilePath:str):
-		assert inFilePath != outFilePath
-
-		with lzma.open(inFilePath, "rb") as fin:
-			with open(outFilePath, "wb") as fout:
-				Unpacker._spool(fin, fout)
-	#
-
-	@staticmethod
-	def _spool(fin, fout):
-		assert fin
-		assert fout
-
-		lastBlockSize = 65536
-		totalLength = 0
-
-		for dataChunk in iter(lambda: fin.read(65536), b""):
-			assert lastBlockSize == 65536
-			lastBlockSize = len(dataChunk)
-			assert lastBlockSize > 0
-			totalLength += len(dataChunk)
-			fout.write(dataChunk)
 	#
 
 #

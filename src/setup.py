@@ -27,6 +27,7 @@ setup(
 	install_requires = [
 		"jk_simpleexec",
 		"jk_logging",
+		"jk_prettyprintobj",
 	],
 	keywords = [
 		"...",
@@ -36,7 +37,7 @@ setup(
 	packages = [
 		"jk_packunpack",
 	],
-	version = "0.2020.11.11",
+	version = "0.2020.12.20",
 	zip_safe = False,
 	long_description = readme(),
 	long_description_content_type="text/markdown",
