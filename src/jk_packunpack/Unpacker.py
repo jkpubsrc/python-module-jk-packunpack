@@ -26,30 +26,44 @@ class Unpacker(object):
 	################################################################################################################################
 
 	@staticmethod
-	def _uncompressGZip(inFilePath:str, outFilePath:str):
+	def _uncompressGZip(
+			inFilePath:str,
+			outFilePath:str,
+			terminationFlag:typing.Union[jk_utils.TerminationFlag,None]
+		):
 		assert inFilePath != outFilePath
 
 		with gzip.open(inFilePath, "rb") as fin:
 			with open(outFilePath, "wb") as fout:
-				Spooler._spool(fin, fout)
+				Spooler.spoolStream(fin, fout, terminationFlag)
 	#
 
 	@staticmethod
-	def _uncompressBZip2(inFilePath:str, outFilePath:str):
+	def _uncompressBZip2(
+			inFilePath:str,
+			outFilePath:str,
+			terminationFlag:typing.Union[jk_utils.TerminationFlag,None]
+		):
+
 		assert inFilePath != outFilePath
 
 		with bz2.open(inFilePath, "rb") as fin:
 			with open(outFilePath, "wb") as fout:
-				Spooler._spool(fin, fout)
+				Spooler.spoolStream(fin, fout, terminationFlag)
 	#
 
 	@staticmethod
-	def _uncompressXZ(inFilePath:str, outFilePath:str):
+	def _uncompressXZ(
+			inFilePath:str,
+			outFilePath:str,
+			terminationFlag:typing.Union[jk_utils.TerminationFlag,None]
+		):
+
 		assert inFilePath != outFilePath
 
 		with lzma.open(inFilePath, "rb") as fin:
 			with open(outFilePath, "wb") as fout:
-				Spooler._spool(fin, fout)
+				Spooler.spoolStream(fin, fout, terminationFlag)
 	#
 
 	################################################################################################################################
@@ -57,7 +71,12 @@ class Unpacker(object):
 	################################################################################################################################
 
 	@staticmethod
-	def untarToDir(srcTarFile:str, destDirPath:str, log:jk_logging.AbstractLogger):
+	def untarToDir(
+			srcTarFile:str,
+			destDirPath:str,
+			log:jk_logging.AbstractLogger
+		):
+
 		assert isinstance(srcTarFile, str)
 		assert isinstance(destDirPath, str)
 		assert isinstance(log, jk_logging.AbstractLogger)
@@ -86,7 +105,10 @@ class Unpacker(object):
 	#
 
 	@staticmethod
-	def guessCompressionFromFilePath(filePath:str) -> typing.Union[str,str]:
+	def guessCompressionFromFilePath(
+			filePath:str
+		) -> typing.Union[str,str]:
+
 		assert isinstance(filePath, str)
 
 		if filePath.endswith(".gz"):
@@ -106,7 +128,14 @@ class Unpacker(object):
 	#
 
 	@staticmethod
-	def uncompressFile(filePath:str, toFilePath:typing.Union[str,None], bDeleteOriginal:bool, log:jk_logging.AbstractLogger) -> str:
+	def uncompressFile(
+			filePath:str,
+			toFilePath:typing.Union[str,None],
+			bDeleteOriginal:bool,
+			terminationFlag:typing.Union[jk_utils.TerminationFlag,None],
+			log:jk_logging.AbstractLogger
+		) -> str:
+
 		assert isinstance(filePath, str)
 		if toFilePath is not None:
 			assert isinstance(toFilePath, str)
@@ -141,7 +170,7 @@ class Unpacker(object):
 
 			# TODO: check if target file already exists
 
-			m(filePath, toFilePath)
+			m(filePath, toFilePath, terminationFlag)
 
 			resultFileSize = os.path.getsize(toFilePath)
 			uncompressionFactor = round(100 * orgFileSize / resultFileSize, 2)

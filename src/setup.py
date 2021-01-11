@@ -37,7 +37,7 @@ setup(
 	packages = [
 		"jk_packunpack",
 	],
-	version = "0.2020.12.20",
+	version = "0.2021.1.11",
 	zip_safe = False,
 	long_description = readme(),
 	long_description_content_type="text/markdown",

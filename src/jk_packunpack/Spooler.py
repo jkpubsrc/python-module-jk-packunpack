@@ -20,7 +20,7 @@ class Spooler(object):
 	################################################################################################################################
 
 	@staticmethod
-	def _copy(inFilePath:str, outFilePath:str, chModValueI:int = None):
+	def _copy(inFilePath:str, outFilePath:str, chModValueI:typing.Union[int,None], terminationCheckMethod):
 		assert inFilePath != outFilePath
 
 		with open(inFilePath, "rb") as fin:
@@ -30,11 +30,11 @@ class Spooler(object):
 			else:
 				fdesc = os.open(outFilePath, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, chModValueI)
 				with open(fdesc, "wb") as fout:
-					Spooler._spool(fin, fout)
+					Spooler._spool(fin, fout, terminationCheckMethod)
 	#
 
 	@staticmethod
-	def _spool(fin, fout):
+	def _spool(fin, fout, terminationCheckMethod) -> int:
 		assert fin
 		assert fout
 
@@ -42,11 +42,16 @@ class Spooler(object):
 		totalLength = 0
 
 		for dataChunk in iter(lambda: fin.read(65536), b""):
+			if terminationCheckMethod:
+				terminationCheckMethod()
+
 			assert lastBlockSize == 65536
 			lastBlockSize = len(dataChunk)
 			assert lastBlockSize > 0
 			totalLength += len(dataChunk)
 			fout.write(dataChunk)
+
+		return totalLength
 	#
 
 	################################################################################################################################
@@ -54,7 +59,33 @@ class Spooler(object):
 	################################################################################################################################
 
 	@staticmethod
-	def spoolFile(fromFilePath:str, toFilePath:str, bDeleteOriginal:bool, chModValue:typing.Union[int,jk_utils.ChModValue,None], log:jk_logging.AbstractLogger) -> SpoolInfo:
+	def spoolStream(
+		fromStream,
+		toStream,
+		terminationFlag:typing.Union[jk_utils.TerminationFlag,None],
+		) -> int:
+
+		if terminationFlag is not None:
+			assert isinstance(terminationFlag, jk_utils.TerminationFlag)
+			terminationCheckMethod = terminationFlag.check
+		else:
+			terminationCheckMethod = None
+
+		totalLength = Spooler._spool(fromStream, toStream, terminationCheckMethod)
+
+		return totalLength
+	#
+
+	@staticmethod
+	def spoolFile(
+		fromFilePath:str,
+		toFilePath:str,
+		bDeleteOriginal:bool,
+		chModValue:typing.Union[int,jk_utils.ChModValue,None],
+		terminationFlag:typing.Union[jk_utils.TerminationFlag,None],
+		log:jk_logging.AbstractLogger,
+		) -> SpoolInfo:
+
 		assert isinstance(fromFilePath, str)
 		assert isinstance(toFilePath, str)
 		assert isinstance(bDeleteOriginal, bool)
@@ -64,6 +95,11 @@ class Spooler(object):
 			else:
 				assert isinstance(chModValue, jk_utils.ChModValue)
 				chModValueI = int(chModValue)
+		if terminationFlag is not None:
+			assert isinstance(terminationFlag, jk_utils.TerminationFlag)
+			terminationCheckMethod = terminationFlag.check
+		else:
+			terminationCheckMethod = None
 		assert isinstance(log, jk_logging.AbstractLogger)
 
 		# ----
@@ -76,7 +112,7 @@ class Spooler(object):
 
 			# TODO: check if target file already exists
 
-			Spooler._copy(fromFilePath, toFilePath, chModValueI)
+			Spooler._copy(fromFilePath, toFilePath, chModValueI, terminationCheckMethod)
 
 			resultFileSize = os.path.getsize(toFilePath)
 

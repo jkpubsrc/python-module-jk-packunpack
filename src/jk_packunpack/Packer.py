@@ -27,48 +27,66 @@ class Packer(object):
 	################################################################################################################################
 
 	@staticmethod
-	def _compressGZip(inFilePath:str, outFilePath:str, chModValueI:int = None):
+	def _compressGZip(
+			inFilePath:str,
+			outFilePath:str,
+			chModValueI:int = None,
+			terminationFlag:jk_utils.TerminationFlag = None
+		):
+
 		assert inFilePath != outFilePath
 
 		with open(inFilePath, "rb") as fin:
 			if chModValueI is None:
 				with gzip.open(outFilePath, "wb") as fout:
-					Spooler._spool(fin, fout)
+					Spooler.spoolStream(fin, fout, terminationFlag)
 			else:
 				fdesc = os.open(outFilePath, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, chModValueI)
 				with open(fdesc, "wb") as fout2:
 					with gzip.open(fout2, "wb") as fout:
-						Spooler._spool(fin, fout)
+						Spooler.spoolStream(fin, fout, terminationFlag)
 	#
 
 	@staticmethod
-	def _compressBZip2(inFilePath:str, outFilePath:str, chModValueI:int = None):
+	def _compressBZip2(
+			inFilePath:str,
+			outFilePath:str,
+			chModValueI:int = None,
+			terminationFlag:jk_utils.TerminationFlag = None
+		):
+
 		assert inFilePath != outFilePath
 
 		with open(inFilePath, "rb") as fin:
 			if chModValueI is None:
 				with bz2.open(outFilePath, "wb") as fout:
-					Spooler._spool(fin, fout)
+					Spooler.spoolStream(fin, fout, terminationFlag)
 			else:
 				fdesc = os.open(outFilePath, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, chModValueI)
 				with open(fdesc, "wb") as fout2:
 					with bz2.open(fout2, "wb") as fout:
-						Spooler._spool(fin, fout)
+						Spooler.spoolStream(fin, fout, terminationFlag)
 	#
 
 	@staticmethod
-	def _compressXZ(inFilePath:str, outFilePath:str, chModValueI:int = None):
+	def _compressXZ(
+			inFilePath:str,
+			outFilePath:str,
+			chModValueI:int = None,
+			terminationFlag:jk_utils.TerminationFlag = None
+		):
+
 		assert inFilePath != outFilePath
 
 		with open(inFilePath, "rb") as fin:
 			if chModValueI is None:
 				with lzma.open(outFilePath, "wb") as fout:
-					Spooler._spool(fin, fout)
+					Spooler.spoolStream(fin, fout, terminationFlag)
 			else:
 				fdesc = os.open(outFilePath, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, chModValueI)
 				with open(fdesc, "wb") as fout2:
 					with lzma.open(fout2, "wb") as fout:
-						Spooler._spool(fin, fout)
+						Spooler.spoolStream(fin, fout, terminationFlag)
 	#
 
 	#
@@ -95,7 +113,12 @@ class Packer(object):
 	################################################################################################################################
 
 	@staticmethod
-	def tarDir(srcDirPath:str, destTarFile:str, log:jk_logging.AbstractLogger):
+	def tarDir(
+			srcDirPath:str,
+			destTarFile:str,
+			log:jk_logging.AbstractLogger
+		):
+
 		assert isinstance(srcDirPath, str)
 		assert isinstance(destTarFile, str)
 		assert isinstance(log, jk_logging.AbstractLogger)
@@ -122,7 +145,15 @@ class Packer(object):
 	#
 
 	@staticmethod
-	def compressFile(filePath:str, compression:str, bDeleteOriginal:bool, log:jk_logging.AbstractLogger) -> str:
+	@jk_utils.deprecated
+	def compressFile(
+			filePath:str,
+			compression:str,
+			bDeleteOriginal:bool,
+			terminationFlag:typing.Union[jk_utils.TerminationFlag,None],
+			log:jk_logging.AbstractLogger
+		) -> str:
+
 		assert isinstance(filePath, str)
 		assert isinstance(compression, str)
 		assert isinstance(bDeleteOriginal, bool)
@@ -144,7 +175,7 @@ class Packer(object):
 
 			# TODO: check if target file already exists
 
-			m(filePath, toFilePath)
+			m(filePath, toFilePath, None, terminationFlag)
 
 			resultFileSize = os.path.getsize(toFilePath)
 			compressionFactor = round(100 * resultFileSize / orgFileSize, 2)
@@ -161,7 +192,16 @@ class Packer(object):
 	#
 
 	@staticmethod
-	def compressFile2(filePath:str, toFilePath:typing.Union[str,None], compression:str, bDeleteOriginal:bool, chModValue:typing.Union[int,jk_utils.ChModValue,None], log:jk_logging.AbstractLogger) -> SpoolInfo:
+	def compressFile2(
+			filePath:str,
+			toFilePath:typing.Union[str,None],
+			compression:str,
+			bDeleteOriginal:bool,
+			chModValue:typing.Union[int,jk_utils.ChModValue,None],
+			terminationFlag:typing.Union[jk_utils.TerminationFlag,None],
+			log:jk_logging.AbstractLogger
+		) -> SpoolInfo:
+
 		assert isinstance(filePath, str)
 		if toFilePath is not None:
 			assert isinstance(toFilePath, str)
@@ -192,7 +232,7 @@ class Packer(object):
 
 			# TODO: check if target file already exists
 
-			m(filePath, toFilePath, chModValueI)
+			m(filePath, toFilePath, chModValueI, terminationFlag)
 
 			resultFileSize = os.path.getsize(toFilePath)
 

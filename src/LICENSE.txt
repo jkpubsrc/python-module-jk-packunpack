@@ -1,2 +1,2 @@
-Copyright (c) 2020 by Jürgen Knauth.
+Copyright (c) 2021 by Jürgen Knauth.
 All rights reserved. Copying is prohibited.

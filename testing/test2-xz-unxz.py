@@ -19,13 +19,12 @@ with jk_logging.wrapMain() as log:
 	result = Packer.compressFile2(
 		filePath="testdata/myfile.txt",
 		toFilePath=None,
-		compression="bz2",
+		compression="xz",
 		bDeleteOriginal=False,
 		chModValue=jk_utils.ChModValue("rwx------"),
 		terminationFlag=terminationFlag,
 		log=log)
-	result.dump(printFunc=log.notice)
-	Assert.isEqual(result.toFilePath, os.path.abspath("testdata/myfile.txt.bz2"))
+	Assert.isEqual(result.toFilePath, os.path.abspath("testdata/myfile.txt.xz"))
 
 	resultFilePath2 = Unpacker.uncompressFile(
 		filePath=result.toFilePath,
