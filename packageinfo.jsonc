@@ -5,13 +5,13 @@
 	},
 	"meta": {
 		"name": "jk_packunpack",
-		"version": "0.2021.1.11",
+		"version": "0.2022.2.4",
 		"packageClass": "python-module",
 		"language": "python3",
 		"development_status": "stable",
 		"license": "proprietary",
 		"keywords": [
-			"..."
+			"gz", "gzip", "tar", "bz2", "bzip", "xz"
 		],
 		"description": "Helper module to create or unpack tar archives, compress or uncompress files.",
 		"authors": [
