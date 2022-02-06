@@ -1,13 +1,16 @@
 ﻿
 
 
-__version__ = "0.2022.2.6.1"
+__version__ = "0.2022.2.6.2"
 __api_version__ = 2
 
 
 
+from .FileUncompressionGuess import FileUncompressionGuess
+
 from .SpoolInfo import SpoolInfo
 from .Spooler import Spooler
+
 from .Packer import Packer
 from .Packer1 import Packer1
 from .Unpacker import Unpacker
