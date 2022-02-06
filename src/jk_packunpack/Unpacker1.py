@@ -17,7 +17,7 @@ from .SpoolInfo import SpoolInfo
 
 
 
-class Unpacker(object):
+class Unpacker1(object):
 
 	_TAR_PATH = "/bin/tar"
 
@@ -98,14 +98,14 @@ class Unpacker(object):
 			if not os.path.isdir(destDirPath):
 				os.makedirs(destDirPath)
 
-			if not os.path.isfile(Unpacker._TAR_PATH):
+			if not os.path.isfile(Unpacker1._TAR_PATH):
 				raise Exception("'tar' not found!")
 
 			tarArgs = [
 				"-xf", srcTarFilePath, "-C", destDirPath
 			]
 			log2.notice("Invoking /bin/tar with: " + str(tarArgs))
-			cmdResult = jk_simpleexec.invokeCmd(Unpacker._TAR_PATH, tarArgs, workingDirectory=destDirPath)
+			cmdResult = jk_simpleexec.invokeCmd(Unpacker1._TAR_PATH, tarArgs, workingDirectory=destDirPath)
 
 			if cmdResult.returnCode != 0:
 				cmdResult.dump(writeFunction=log2.error)
@@ -156,19 +156,19 @@ class Unpacker(object):
 			filePath = os.path.abspath(filePath)
 			assert os.path.isfile(filePath)
 
-			compression, toFilePath2 = Unpacker.guessCompressionFromFilePath(filePath)
+			compression, toFilePath2 = Unpacker1.guessCompressionFromFilePath(filePath)
 			if toFilePath is None:
 				toFilePath = toFilePath2
 
 			if compression in [ "gz", "gzip" ]:
 				name = "gzip"
-				m = Unpacker._uncompressGZip
+				m = Unpacker1._uncompressGZip
 			elif compression in [ "bz2", "bzip2" ]:
 				name = "bzip2"
-				m = Unpacker._uncompressBZip2
+				m = Unpacker1._uncompressBZip2
 			elif compression in [ "xz" ]:
 				name = "xz"
-				m = Unpacker._uncompressXZ
+				m = Unpacker1._uncompressXZ
 			else:
 				raise Exception("Unknown compression: " + repr(compression))
 

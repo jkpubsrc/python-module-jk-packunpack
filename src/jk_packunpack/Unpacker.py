@@ -29,41 +29,59 @@ class Unpacker(object):
 	def _uncompressGZip(
 			inFilePath:str,
 			outFilePath:str,
-			terminationFlag:typing.Union[jk_utils.TerminationFlag,None]
+			chModValueI:int = None,
+			terminationFlag:jk_utils.TerminationFlag = None,
 		):
 		assert inFilePath != outFilePath
 
 		with gzip.open(inFilePath, "rb") as fin:
-			with open(outFilePath, "wb") as fout:
-				Spooler.spoolStream(fin, fout, terminationFlag)
+			if chModValueI is None:
+				with open(outFilePath, "wb") as fout:
+					Spooler.spoolStream(fin, fout, terminationFlag)
+			else:
+				fdesc = os.open(outFilePath, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, chModValueI)
+				with open(fdesc, "wb") as fout:
+					Spooler.spoolStream(fin, fout, terminationFlag)
 	#
 
 	@staticmethod
 	def _uncompressBZip2(
 			inFilePath:str,
 			outFilePath:str,
-			terminationFlag:typing.Union[jk_utils.TerminationFlag,None]
+			chModValueI:int = None,
+			terminationFlag:jk_utils.TerminationFlag = None,
 		):
 
 		assert inFilePath != outFilePath
 
 		with bz2.open(inFilePath, "rb") as fin:
-			with open(outFilePath, "wb") as fout:
-				Spooler.spoolStream(fin, fout, terminationFlag)
+			if chModValueI is None:
+				with open(outFilePath, "wb") as fout:
+					Spooler.spoolStream(fin, fout, terminationFlag)
+			else:
+				fdesc = os.open(outFilePath, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, chModValueI)
+				with open(fdesc, "wb") as fout:
+					Spooler.spoolStream(fin, fout, terminationFlag)
 	#
 
 	@staticmethod
 	def _uncompressXZ(
 			inFilePath:str,
 			outFilePath:str,
-			terminationFlag:typing.Union[jk_utils.TerminationFlag,None]
+			chModValueI:int = None,
+			terminationFlag:jk_utils.TerminationFlag = None,
 		):
 
 		assert inFilePath != outFilePath
 
 		with lzma.open(inFilePath, "rb") as fin:
-			with open(outFilePath, "wb") as fout:
-				Spooler.spoolStream(fin, fout, terminationFlag)
+			if chModValueI is None:
+				with open(outFilePath, "wb") as fout:
+					Spooler.spoolStream(fin, fout, terminationFlag)
+			else:
+				fdesc = os.open(outFilePath, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, chModValueI)
+				with open(fdesc, "wb") as fout:
+					Spooler.spoolStream(fin, fout, terminationFlag)
 	#
 
 	################################################################################################################################
@@ -79,10 +97,14 @@ class Unpacker(object):
 	#
 	@staticmethod
 	def untarToDir(
+			*args,
 			srcTarFilePath:str,
 			destDirPath:str,
-			log:jk_logging.AbstractLogger
+			log:jk_logging.AbstractLogger,
 		) -> None:
+
+		if args:
+			raise Exception("Invoke this method with named arguments only!")
 
 		assert isinstance(srcTarFilePath, str)
 		assert os.path.isfile(srcTarFilePath)
@@ -137,17 +159,24 @@ class Unpacker(object):
 
 	@staticmethod
 	def uncompressFile(
+			*args,
 			filePath:str,
-			toFilePath:typing.Union[str,None],
-			bDeleteOriginal:bool,
-			terminationFlag:typing.Union[jk_utils.TerminationFlag,None],
-			log:jk_logging.AbstractLogger
+			toFilePath:str = None,
+			bDeleteOriginal:bool = False,
+			chModValue:typing.Union[int,str,jk_utils.ChModValue,None] = None,
+			terminationFlag:jk_utils.TerminationFlag = None,
+			log:jk_logging.AbstractLogger,
 		) -> str:
+
+		if args:
+			raise Exception("Invoke this method with named arguments only!")
 
 		assert isinstance(filePath, str)
 		if toFilePath is not None:
 			assert isinstance(toFilePath, str)
 		assert isinstance(bDeleteOriginal, bool)
+		chModValue = jk_utils.ChModValue.createN(chModValue)
+		chModValueI = None if chModValue is None else chModValue.toInt()
 		assert isinstance(log, jk_logging.AbstractLogger)
 
 		# ----
@@ -178,7 +207,7 @@ class Unpacker(object):
 
 			# TODO: check if target file already exists
 
-			m(filePath, toFilePath, terminationFlag)
+			m(filePath, toFilePath, chModValueI, terminationFlag)
 
 			resultFileSize = os.path.getsize(toFilePath)
 			uncompressionFactor = round(100 * orgFileSize / resultFileSize, 2)

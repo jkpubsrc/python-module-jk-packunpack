@@ -1,9 +1,8 @@
 ﻿src/dist/
 src/*.egg-info/
+src/build/
 **/__pycache__/
 .svn/
 .vscode
 examples/*.log
-testing/output/*
-testing/output2/*
-testing/testdata/*.txt.*
+testing/test_all-*

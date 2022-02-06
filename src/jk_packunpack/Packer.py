@@ -1,5 +1,4 @@
 
-from genericpath import samestat
 import os
 import typing
 import tarfile
@@ -122,13 +121,20 @@ class Packer(object):
 	#
 	@staticmethod
 	def tarDir(
+			*args,
 			srcDirPath:str,
 			destTarFilePath:str,
-			log:jk_logging.AbstractLogger
-		):
+			chModValue:typing.Union[int,str,jk_utils.ChModValue,None] = None,
+			log:jk_logging.AbstractLogger,
+		) -> str:
+
+		if args:
+			raise Exception("Invoke this method with named arguments only!")
 
 		assert isinstance(srcDirPath, str)
 		assert isinstance(destTarFilePath, str)
+		chModValue = jk_utils.ChModValue.createN(chModValue)
+		chModValueI = None if chModValue is None else chModValue.toInt()
 		assert isinstance(log, jk_logging.AbstractLogger)
 
 		# ----
@@ -146,15 +152,23 @@ class Packer(object):
 			]
 
 			log2.notice("Invoking /bin/tar with: " + str(tarArgs))
-			cmdResult = jk_simpleexec.invokeCmd2(
-				cmdPath=Packer._TAR_PATH,
-				cmdArgs=tarArgs,
-				workingDirectory=srcDirPath,
-			)
+			_oldmask = os.umask(0o777 ^ chModValueI) if chModValueI is not None else None
+			try:
+				cmdResult = jk_simpleexec.invokeCmd2(
+					cmdPath=Packer._TAR_PATH,
+					cmdArgs=tarArgs,
+					workingDirectory=srcDirPath,
+				)
+			finally:
+				if _oldmask is not None:
+					os.umask(_oldmask)
+					os.chmod(destTarFilePath, chModValueI)	# required as tar will not set the execute bit
 
 			if cmdResult.returnCode != 0:
 				cmdResult.dump(writeFunction=log2.error)
 				raise Exception("Failed to run 'tar'!")
+
+		return destTarFilePath
 	#
 
 	#
@@ -169,11 +183,16 @@ class Packer(object):
 	#
 	@staticmethod
 	def tarDirContents(
+			*args,
 			srcDirPath:str,
 			destTarFilePath:str,
+			chModValue:typing.Union[int,str,jk_utils.ChModValue,None] = None,
 			filesAndDirsToInclude:typing.List[str] = None,
-			log:jk_logging.AbstractLogger = None,
-		):
+			log:jk_logging.AbstractLogger,
+		) -> str:
+
+		if args:
+			raise Exception("Invoke this method with named arguments only!")
 
 		assert isinstance(srcDirPath, str)
 		assert isinstance(destTarFilePath, str)
@@ -182,6 +201,8 @@ class Packer(object):
 			for fn in filesAndDirsToInclude:
 				assert isinstance(fn, str)
 				assert fn
+		chModValue = jk_utils.ChModValue.createN(chModValue)
+		chModValueI = None if chModValue is None else chModValue.toInt()
 		assert isinstance(log, jk_logging.AbstractLogger)
 
 		# ----
@@ -202,62 +223,25 @@ class Packer(object):
 			] + filesAndDirsToInclude
 
 			log2.notice("Invoking /bin/tar ...")
-			cmdResult = jk_simpleexec.invokeCmd2(
-				cmdPath=Packer._TAR_PATH,
-				cmdArgs=tarArgs,
-				workingDirectory=srcDirPath,
-			)
+			_oldmask = os.umask(0o777 ^ chModValueI) if chModValueI is not None else None
+			try:
+				cmdResult = jk_simpleexec.invokeCmd2(
+					cmdPath=Packer._TAR_PATH,
+					cmdArgs=tarArgs,
+					workingDirectory=srcDirPath,
+				)
+			finally:
+				if _oldmask is not None:
+					os.umask(_oldmask)
+					os.chmod(destTarFilePath, chModValueI)	# required as tar will not set the execute bit
 
 			if cmdResult.returnCode != 0:
 				cmdResult.dump(writeFunction=log2.error)
 				raise Exception("Failed to run 'tar'!")
-	#
-
-	@staticmethod
-	@jk_utils.deprecated
-	def compressFile(
-			filePath:str,
-			compression:str,
-			bDeleteOriginal:bool,
-			terminationFlag:typing.Union[jk_utils.TerminationFlag,None],
-			log:jk_logging.AbstractLogger
-		) -> str:
-
-		assert isinstance(filePath, str)
-		assert isinstance(compression, str)
-		assert isinstance(bDeleteOriginal, bool)
-		assert isinstance(log, jk_logging.AbstractLogger)
 
 		# ----
 
-		with log.descend("Compressing " + repr(filePath) + " ...") as log2:
-			filePath = os.path.abspath(filePath)
-			assert os.path.isfile(filePath)
-
-			name, ext, m = Packer._getCompressionParams(compression)
-
-			log.notice("Packing with " + name + " ...")
-
-			orgFileSize = os.path.getsize(filePath)
-
-			toFilePath = filePath + ext
-
-			# TODO: check if target file already exists
-
-			m(filePath, toFilePath, None, terminationFlag)
-
-			resultFileSize = os.path.getsize(toFilePath)
-			compressionFactor = round(100 * resultFileSize / orgFileSize, 2)
-			log.notice("Compression factor: {}%".format(compressionFactor))
-
-			if bDeleteOriginal:
-				if os.path.isfile(filePath):
-					os.unlink(filePath)
-			else:
-				if not os.path.isfile(filePath):
-					raise Exception("Implementation error!")
-
-			return toFilePath
+		return destTarFilePath
 	#
 
 	#
@@ -275,26 +259,27 @@ class Packer(object):
 	# @param	AbstractLogger log					(required) A logger to write log information to
 	#
 	@staticmethod
-	def compressFile2(
+	def compressFile(
+			*args,
 			filePath:str,
-			toFilePath:typing.Union[str,None],
+			toFilePath:str = None,
 			compression:str,
-			bDeleteOriginal:bool,
-			chModValue:typing.Union[int,str,jk_utils.ChModValue,None],
-			terminationFlag:typing.Union[jk_utils.TerminationFlag,None],
+			bDeleteOriginal:bool = False,
+			chModValue:typing.Union[int,str,jk_utils.ChModValue,None] = None,
+			terminationFlag:jk_utils.TerminationFlag = None,
 			log:jk_logging.AbstractLogger,
 		) -> SpoolInfo:
+
+		if args:
+			raise Exception("Invoke this method with named arguments only!")
 
 		assert isinstance(filePath, str)
 		if toFilePath is not None:
 			assert isinstance(toFilePath, str)
 		assert isinstance(compression, str)
 		assert isinstance(bDeleteOriginal, bool)
-		if chModValue is not None:
-			if isinstance(chModValue, int):
-				chModValueI = chModValue
-			else:
-				chModValueI = jk_utils.ChModValue.create(chModValue).toInt()
+		chModValue = jk_utils.ChModValue.createN(chModValue)
+		chModValueI = None if chModValue is None else chModValue.toInt()
 		assert isinstance(log, jk_logging.AbstractLogger)
 
 		# ----

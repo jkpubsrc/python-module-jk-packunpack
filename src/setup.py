@@ -42,7 +42,7 @@ setup(
 	packages = [
 		"jk_packunpack",
 	],
-	version = "0.2022.2.4",
+	version = "0.2022.2.6.1",
 	zip_safe = False,
 	long_description = readme(),
 	long_description_content_type="text/markdown",

@@ -8,3 +8,10 @@
 	* Updated `README.md`
 	* Added documentation to various methods
 	* Added `tarDirContents()`
+
+* 2022-02-06
+	* Improved chmod handling in `Packer`
+	* Old `Packer` stored as `Packer1`
+	* Old `Unpacker` stored as `Unpacker1`
+	* Added more methods to `Packer`
+	* Unit testing
