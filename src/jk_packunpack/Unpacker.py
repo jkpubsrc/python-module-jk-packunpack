@@ -12,6 +12,8 @@ import jk_utils
 
 from .Spooler import Spooler
 from .SpoolInfo import SpoolInfo
+from .FileUncompressionGuess import FileUncompressionGuess
+
 
 
 
@@ -113,7 +115,7 @@ class Unpacker(object):
 
 		# ----
 
-		with log.descend("Unpacking " + repr(srcTarFilePath) + " ...") as log2:
+		with log.descend("Unpacking " + repr(srcTarFilePath) + " ...", logLevel=jk_logging.EnumLogLevel.NOTICE) as log2:
 			srcTarFilePath = os.path.abspath(srcTarFilePath)
 			assert os.path.isfile(srcTarFilePath)
 			destDirPath = os.path.abspath(destDirPath)
@@ -126,7 +128,7 @@ class Unpacker(object):
 			tarArgs = [
 				"-xf", srcTarFilePath, "-C", destDirPath
 			]
-			log2.notice("Invoking /bin/tar with: " + str(tarArgs))
+			log2.notice("Invoking {} with: {}".format(Unpacker._TAR_PATH, str(tarArgs)))
 			cmdResult = jk_simpleexec.invokeCmd(Unpacker._TAR_PATH, tarArgs, workingDirectory=destDirPath)
 
 			if cmdResult.returnCode != 0:
@@ -134,34 +136,79 @@ class Unpacker(object):
 				raise Exception("Failed to run 'tar'!")
 	#
 
+	#
+	# Guess the type of uncompression and calculate the uncompression file path
+	# An exception is raised on error.
+	#
 	@staticmethod
-	def guessCompressionFromFilePath(
+	def guessCompressionFromFilePathE(
 			filePath:str
-		) -> typing.Union[str,str]:
+		) -> FileUncompressionGuess:
 
 		assert isinstance(filePath, str)
 
 		if filePath.endswith(".gz"):
-			return "gz", filePath[:-3]
+			return FileUncompressionGuess("gz", filePath[:-3])
 		elif filePath.endswith(".bz2"):
-			return "bz2", filePath[:-4]
+			return FileUncompressionGuess("bz2", filePath[:-4])
 		elif filePath.endswith(".xz"):
-			return "xz", filePath[:-3]
+			return FileUncompressionGuess("xz", filePath[:-3])
 		elif filePath.endswith(".tgz"):
-			return "gz", filePath[:-2] + "ar"
+			return FileUncompressionGuess("gz", filePath[:-2] + "ar")
 		elif filePath.endswith(".tbz2"):
-			return "bz2", filePath[:-3] + "ar"
+			return FileUncompressionGuess("bz2", filePath[:-3] + "ar")
 		elif filePath.endswith(".txz"):
-			return "xz", filePath[:-2] + "ar"
+			return FileUncompressionGuess("xz", filePath[:-2] + "ar")
 		else:
 			raise Exception("Can't guess compression!")
 	#
 
+	#
+	# Guess the type of uncompression and calculate the uncompression file path
+	#
+	@staticmethod
+	def guessCompressionFromFilePathN(
+			filePath:str
+		) -> typing.Union[FileUncompressionGuess,None]:
+
+		assert isinstance(filePath, str)
+
+		if filePath.endswith(".gz"):
+			return FileUncompressionGuess("gz", filePath[:-3])
+		elif filePath.endswith(".bz2"):
+			return FileUncompressionGuess("bz2", filePath[:-4])
+		elif filePath.endswith(".xz"):
+			return FileUncompressionGuess("xz", filePath[:-3])
+		elif filePath.endswith(".tgz"):
+			return FileUncompressionGuess("gz", filePath[:-2] + "ar")
+		elif filePath.endswith(".tbz2"):
+			return FileUncompressionGuess("bz2", filePath[:-3] + "ar")
+		elif filePath.endswith(".txz"):
+			return FileUncompressionGuess("xz", filePath[:-2] + "ar")
+		else:
+			return None
+	#
+
+	#
+	# Decompress the specified file.
+	#
+	# @param	str filePath						(required) The path of the file to uncompress.
+	# @param	str toFilePath						(optional) The path of the file to write the uncompressed data to.
+	# @param	str toDirPath						(optional) A directory to write the data to. If specified this overrides the
+	#												regular directory the resulting file will be created in.
+	# @param	bool bDeleteOriginal				(required) If <c>True</c> the source file will be deleted after successfull decompression.
+	# @param	int|str|ChModValue chModValue		(optional) If specified this change-mode value will be used to set the permissions of
+	#												the created file.
+	# @param	TerminationFlag terminationFlag		(optional) A termination flag for graceful asynchroneous termination.
+	# @param	AbstractLogger log					(required) A logger to write log information to
+	# @return	str									Returns the path of the result file.
+	#
 	@staticmethod
 	def uncompressFile(
 			*args,
 			filePath:str,
 			toFilePath:str = None,
+			toDirPath:str = None,
 			bDeleteOriginal:bool = False,
 			chModValue:typing.Union[int,str,jk_utils.ChModValue,None] = None,
 			terminationFlag:jk_utils.TerminationFlag = None,
@@ -174,6 +221,9 @@ class Unpacker(object):
 		assert isinstance(filePath, str)
 		if toFilePath is not None:
 			assert isinstance(toFilePath, str)
+		if toDirPath is not None:
+			assert isinstance(toDirPath, str)
+			assert os.path.isdir(toDirPath)
 		assert isinstance(bDeleteOriginal, bool)
 		chModValue = jk_utils.ChModValue.createN(chModValue)
 		chModValueI = None if chModValue is None else chModValue.toInt()
@@ -181,25 +231,29 @@ class Unpacker(object):
 
 		# ----
 
-		with log.descend("Uncompressing " + repr(filePath) + " ...") as log2:
+		with log.descend("Uncompressing " + repr(filePath) + " ...", logLevel=jk_logging.EnumLogLevel.NOTICE) as log2:
 			filePath = os.path.abspath(filePath)
 			assert os.path.isfile(filePath)
 
-			compression, toFilePath2 = Unpacker.guessCompressionFromFilePath(filePath)
+			guess = Unpacker.guessCompressionFromFilePathE(filePath)
 			if toFilePath is None:
-				toFilePath = toFilePath2
+				toFilePath = guess.toFilePath
+			if toDirPath is not None:
+				# override already existing directory
+				_fileName = os.path.basename(toFilePath)
+				toFilePath = os.path.join(toDirPath, _fileName)
 
-			if compression in [ "gz", "gzip" ]:
+			if guess.compression in [ "gz", "gzip" ]:
 				name = "gzip"
 				m = Unpacker._uncompressGZip
-			elif compression in [ "bz2", "bzip2" ]:
+			elif guess.compression in [ "bz2", "bzip2" ]:
 				name = "bzip2"
 				m = Unpacker._uncompressBZip2
-			elif compression in [ "xz" ]:
+			elif guess.compression in [ "xz" ]:
 				name = "xz"
 				m = Unpacker._uncompressXZ
 			else:
-				raise Exception("Unknown compression: " + repr(compression))
+				raise Exception("Unknown compression: " + repr(guess.compression))
 
 			log.notice("Unpacking with " + name + " ...")
 

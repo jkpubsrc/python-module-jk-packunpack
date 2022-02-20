@@ -15,3 +15,8 @@
 	* Old `Unpacker` stored as `Unpacker1`
 	* Added more methods to `Packer`
 	* Unit testing
+	* Added `FileUncompressionGuess`
+	* Improved documentation
+
+* 2022-02-20
+	* Reduced log level from INFO to NOTICE

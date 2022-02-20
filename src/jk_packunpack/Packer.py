@@ -139,7 +139,7 @@ class Packer(object):
 
 		# ----
 
-		with log.descend("Packing " + repr(srcDirPath) + " ...") as log2:
+		with log.descend("Packing " + repr(srcDirPath) + " ...", logLevel=jk_logging.EnumLogLevel.NOTICE) as log2:
 			srcDirPath = os.path.abspath(srcDirPath)
 			assert os.path.isdir(srcDirPath)
 			destTarFilePath = os.path.abspath(destTarFilePath)
@@ -207,7 +207,7 @@ class Packer(object):
 
 		# ----
 
-		with log.descend("Packing " + repr(srcDirPath) + " ...") as log2:
+		with log.descend("Packing " + repr(srcDirPath) + " ...", logLevel=jk_logging.EnumLogLevel.NOTICE) as log2:
 			srcDirPath = os.path.abspath(srcDirPath)
 			assert os.path.isdir(srcDirPath)
 			destTarFilePath = os.path.abspath(destTarFilePath)
@@ -244,6 +244,14 @@ class Packer(object):
 		return destTarFilePath
 	#
 
+	def isValidCompression(self, compression:str) -> bool:
+		try:
+			Packer._getCompressionParams(compression)
+			return True
+		except:
+			return False
+	#
+
 	#
 	# Compress the specified file.
 	#
@@ -251,18 +259,22 @@ class Packer(object):
 	# @param	str toFilePath						(optional) The path of the file to write the compressed data to.
 	#												If <c>None</c> a new file path is created with suitable exension based on the
 	#												compression type.
+	# @param	str toDirPath						(optional) A directory to write the data to. If specified this overrides the
+	#												regular directory the resulting file will be created in.
 	# @param	str compression						(required) The compression. Valid values are: "gz", "gzip", "bz2", "bzip2", "xz"
 	# @param	bool bDeleteOriginal				(required) If <c>True</c> the source file will be deleted after successfull compression.
-	# @param	int|str|ChModValue chModValue		(optional) If specified this change-mode value will be used to set the permission of
+	# @param	int|str|ChModValue chModValue		(optional) If specified this change-mode value will be used to set the permissions of
 	#												the created file.
 	# @param	TerminationFlag terminationFlag		(optional) A termination flag for graceful asynchroneous termination.
 	# @param	AbstractLogger log					(required) A logger to write log information to
+	# @return	str									Returns the path of the result file.
 	#
 	@staticmethod
 	def compressFile(
 			*args,
 			filePath:str,
 			toFilePath:str = None,
+			toDirPath:str = None,
 			compression:str,
 			bDeleteOriginal:bool = False,
 			chModValue:typing.Union[int,str,jk_utils.ChModValue,None] = None,
@@ -276,6 +288,9 @@ class Packer(object):
 		assert isinstance(filePath, str)
 		if toFilePath is not None:
 			assert isinstance(toFilePath, str)
+		if toDirPath is not None:
+			assert isinstance(toDirPath, str)
+			assert os.path.isdir(toDirPath)
 		assert isinstance(compression, str)
 		assert isinstance(bDeleteOriginal, bool)
 		chModValue = jk_utils.ChModValue.createN(chModValue)
@@ -284,7 +299,7 @@ class Packer(object):
 
 		# ----
 
-		with log.descend("Compressing " + repr(filePath) + " ...") as log2:
+		with log.descend("Compressing " + repr(filePath) + " ...", logLevel=jk_logging.EnumLogLevel.NOTICE) as log2:
 			filePath = os.path.abspath(filePath)
 			assert os.path.isfile(filePath)
 
@@ -296,6 +311,10 @@ class Packer(object):
 
 			if toFilePath is None:
 				toFilePath = filePath + compressionFileExt
+			if toDirPath is not None:
+				# override already existing directory
+				_fileName = os.path.basename(toFilePath)
+				toFilePath = os.path.join(toDirPath, _fileName)
 
 			# TODO: check if target file already exists
 
