@@ -12,15 +12,13 @@ import jk_utils
 
 from .Spooler import Spooler
 from .SpoolInfo import SpoolInfo
-
+from .impl import TARER
 
 
 
 
 
 class Packer(object):
-
-	_TAR_PATH = "/bin/tar"
 
 	################################################################################################################################
 	## Static Helper Methods
@@ -113,65 +111,6 @@ class Packer(object):
 	################################################################################################################################
 
 	#
-	# Pack the specified directory in a tar file.
-	#
-	# @param		str srcDirPath						(required) The directory to pack
-	# @param		str destTarFilePath					(required) The tar file to create
-	# @param		AbstractLogger log					(required) A logger to write log information to
-	#
-	@staticmethod
-	def tarDir(
-			*args,
-			srcDirPath:str,
-			destTarFilePath:str,
-			chModValue:typing.Union[int,str,jk_utils.ChModValue,None] = None,
-			log:jk_logging.AbstractLogger,
-		) -> str:
-
-		if args:
-			raise Exception("Invoke this method with named arguments only!")
-
-		assert isinstance(srcDirPath, str)
-		assert isinstance(destTarFilePath, str)
-		chModValue = jk_utils.ChModValue.createN(chModValue)
-		chModValueI = None if chModValue is None else chModValue.toInt()
-		assert isinstance(log, jk_logging.AbstractLogger)
-
-		# ----
-
-		with log.descend("Packing " + repr(srcDirPath) + " ...", logLevel=jk_logging.EnumLogLevel.NOTICE) as log2:
-			srcDirPath = os.path.abspath(srcDirPath)
-			assert os.path.isdir(srcDirPath)
-			destTarFilePath = os.path.abspath(destTarFilePath)
-
-			if not os.path.isfile(Packer._TAR_PATH):
-				raise Exception("'tar' not found!")
-
-			tarArgs = [
-				"-cf", destTarFilePath, "."
-			]
-
-			log2.notice("Invoking /bin/tar with: " + str(tarArgs))
-			_oldmask = os.umask(0o777 ^ chModValueI) if chModValueI is not None else None
-			try:
-				cmdResult = jk_simpleexec.invokeCmd2(
-					cmdPath=Packer._TAR_PATH,
-					cmdArgs=tarArgs,
-					workingDirectory=srcDirPath,
-				)
-			finally:
-				if _oldmask is not None:
-					os.umask(_oldmask)
-					os.chmod(destTarFilePath, chModValueI)	# required as tar will not set the execute bit
-
-			if cmdResult.returnCode != 0:
-				cmdResult.dump(printFunc=log2.error)
-				raise Exception("Failed to run 'tar'!")
-
-		return destTarFilePath
-	#
-
-	#
 	# Pack the contents of the specified directory in a tar file.
 	#
 	# @param	str srcDirPath						(required) The directory to pack
@@ -213,31 +152,21 @@ class Packer(object):
 			destTarFilePath = os.path.abspath(destTarFilePath)
 
 			if filesAndDirsToInclude is None:
-				filesAndDirsToInclude = [ x.name for x in os.scandir(srcDirPath) ]
+				filesAndDirsToInclude = [ fe.name for fe in os.scandir(srcDirPath) ]
 
-			if not os.path.isfile(Packer._TAR_PATH):
-				raise Exception("'tar' not found!")
-
-			tarArgs = [
-				"-cf", destTarFilePath
-			] + filesAndDirsToInclude
-
-			log2.notice("Invoking /bin/tar ...")
 			_oldmask = os.umask(0o777 ^ chModValueI) if chModValueI is not None else None
 			try:
-				cmdResult = jk_simpleexec.invokeCmd2(
-					cmdPath=Packer._TAR_PATH,
-					cmdArgs=tarArgs,
-					workingDirectory=srcDirPath,
+				TARER.tarDirContents(
+					destTarFilePath,
+					srcDirPath,
+					filesAndDirsToInclude,
+					log,
 				)
 			finally:
 				if _oldmask is not None:
 					os.umask(_oldmask)
-					os.chmod(destTarFilePath, chModValueI)	# required as tar will not set the execute bit
-
-			if cmdResult.returnCode != 0:
-				cmdResult.dump(printFunc=log2.error)
-				raise Exception("Failed to run 'tar'!")
+					if os.path.isfile(destTarFilePath):
+						os.chmod(destTarFilePath, chModValueI)	# required as tar will not set the execute bit
 
 		# ----
 

@@ -5,10 +5,10 @@
 	},
 	"meta": {
 		"name": "jk_packunpack",
-		"version": "0.2022.2.20",
+		"version": "0.2022.2.25",
 		"packageClass": "python-module",
 		"language": "python3",
-		"development_status": "stable",
+		"development_status": "beta",
 		"license": "proprietary",
 		"keywords": [
 			"gz", "gzip", "tar", "bz2", "bzip", "xz"
@@ -34,7 +34,8 @@
 	},
 	"source": {
 		"packages": [
-			"jk_packunpack"
+			"jk_packunpack",
+			"jk_packunpack.impl",
 		],
 		"extra_data_files": [
 		],

@@ -15,7 +15,16 @@ import jk_packunpack
 
 SOURCE_DIR_NAME = "testdata"
 SOURCE_FILE_NAME = "myfile.txt"
+SOURCE_FILE_NAME_2 = os.path.join("subdir", "myfile2.txt")
 FILE_CHMOD = jk_utils.ChModValue("rw-------")
+FILE_NAME_SET = set([
+	SOURCE_FILE_NAME,
+	SOURCE_FILE_NAME + ".gz",
+	SOURCE_FILE_NAME + ".bz2",
+	SOURCE_FILE_NAME + ".xz",
+	SOURCE_FILE_NAME_2,
+	"subdir",
+])
 
 
 
@@ -26,12 +35,16 @@ def _recreateDir(dirPath:str):
 	os.mkdir(dirPath)
 #
 
-def _assertFilesAreEquals(filePathA:str, filePathB:str):
-	with open(filePathA, "rb") as fin:
-		contentsA = fin.read()
-	with open(filePathB, "rb") as fin:
-		contentsB = fin.read()
-	Assert.isEqual(contentsA, contentsB)
+def _assertFilesAreEquals(filePathA:str, filePathB:str, log:jk_logging.AbstractLogger):
+	with log.descend("Comparing: {} <-> {}".format(repr(filePathA), repr(filePathB)), logLevel=jk_logging.EnumLogLevel.NOTICE) as log2:
+		if os.path.isdir(filePathA) and os.path.isdir(filePathB):
+			return
+		else:
+			with open(filePathA, "rb") as fin:
+				contentsA = fin.read()
+			with open(filePathB, "rb") as fin:
+				contentsB = fin.read()
+			Assert.isEqual(contentsA, contentsB)
 #
 
 def testCompressionUncompression(
@@ -42,12 +55,12 @@ def testCompressionUncompression(
 	):
 
 	dirAFilePath = os.path.join(dirAPath, SOURCE_FILE_NAME)
-
 	result = jk_packunpack.Packer.compressFile(
 		filePath=dirAFilePath,
 		compression=compression,
 		chModValue=FILE_CHMOD,
 		log=log)
+
 	Assert.isEqual(result.toFilePath, os.path.join(dirA, SOURCE_FILE_NAME + "." + compression))
 	_stats = os.stat(result.toFilePath, follow_symlinks=False)
 	_mod = jk_utils.ChModValue(_stats.st_mode)
@@ -66,7 +79,7 @@ def testCompressionUncompression(
 	_mod = jk_utils.ChModValue(_stats.st_mode)
 	Assert.isEqual(_mod, FILE_CHMOD)
 
-	_assertFilesAreEquals(dirAFilePath, dirBFilePath)
+	_assertFilesAreEquals(dirAFilePath, dirBFilePath, log)
 #
 
 
@@ -79,6 +92,7 @@ with jk_logging.wrapMain() as log:
 
 	srcDirPath = os.path.join(baseDirPath, SOURCE_DIR_NAME)
 	srcFilePath = os.path.join(srcDirPath, SOURCE_FILE_NAME)
+	srcFilePath2 = os.path.join(srcDirPath, SOURCE_FILE_NAME_2)
 
 	dirA = os.path.join(os.getcwd(), baseFileName + "-a")
 	_recreateDir(dirA)
@@ -89,6 +103,9 @@ with jk_logging.wrapMain() as log:
 
 	dirAFilePath = os.path.join(dirA, SOURCE_FILE_NAME)
 	shutil.copyfile(srcFilePath, dirAFilePath)
+	dirAFilePath2 = os.path.join(dirA, SOURCE_FILE_NAME_2)
+	os.mkdir(os.path.dirname(dirAFilePath2))
+	shutil.copyfile(srcFilePath2, dirAFilePath2)
 
 	#----
 
@@ -110,6 +127,10 @@ with jk_logging.wrapMain() as log:
 	_stats = os.stat(dirBTarFilePath, follow_symlinks=False)
 	_mod = jk_utils.ChModValue(_stats.st_mode)
 	Assert.isEqual(_mod, FILE_CHMOD)
+	Assert.isEqual(set(jk_packunpack.Unpacker.listTarContents(
+		tarFilePath=dirBTarFilePath,
+		log=log,
+	)), FILE_NAME_SET)
 
 	ret = jk_packunpack.Unpacker.untarToDir(
 		srcTarFilePath=dirBTarFilePath,
@@ -118,10 +139,8 @@ with jk_logging.wrapMain() as log:
 	)
 	Assert.isNone(ret)
 
-	_assertFilesAreEquals(os.path.join(dirA, SOURCE_FILE_NAME), os.path.join(dirC, SOURCE_FILE_NAME))
-	_assertFilesAreEquals(os.path.join(dirA, SOURCE_FILE_NAME + ".gz"), os.path.join(dirC, SOURCE_FILE_NAME + ".gz"))
-	_assertFilesAreEquals(os.path.join(dirA, SOURCE_FILE_NAME + ".bz2"), os.path.join(dirC, SOURCE_FILE_NAME + ".bz2"))
-	_assertFilesAreEquals(os.path.join(dirA, SOURCE_FILE_NAME + ".xz"), os.path.join(dirC, SOURCE_FILE_NAME + ".xz"))
+	for fileName in FILE_NAME_SET:
+		_assertFilesAreEquals(os.path.join(dirA, fileName), os.path.join(dirC, fileName), log)
 
 	#----
 

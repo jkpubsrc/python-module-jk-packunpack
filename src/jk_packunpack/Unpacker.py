@@ -13,6 +13,7 @@ import jk_utils
 from .Spooler import Spooler
 from .SpoolInfo import SpoolInfo
 from .FileUncompressionGuess import FileUncompressionGuess
+from .impl import TARER
 
 
 
@@ -20,8 +21,6 @@ from .FileUncompressionGuess import FileUncompressionGuess
 
 
 class Unpacker(object):
-
-	_TAR_PATH = "/bin/tar"
 
 	################################################################################################################################
 	## Static Helper Methods
@@ -119,21 +118,12 @@ class Unpacker(object):
 			srcTarFilePath = os.path.abspath(srcTarFilePath)
 			assert os.path.isfile(srcTarFilePath)
 			destDirPath = os.path.abspath(destDirPath)
-			if not os.path.isdir(destDirPath):
-				os.makedirs(destDirPath)
 
-			if not os.path.isfile(Unpacker._TAR_PATH):
-				raise Exception("'tar' not found!")
-
-			tarArgs = [
-				"-xf", srcTarFilePath, "-C", destDirPath
-			]
-			log2.notice("Invoking {} with: {}".format(Unpacker._TAR_PATH, str(tarArgs)))
-			cmdResult = jk_simpleexec.invokeCmd(Unpacker._TAR_PATH, tarArgs, workingDirectory=destDirPath)
-
-			if cmdResult.returnCode != 0:
-				cmdResult.dump(printFunc=log2.error)
-				raise Exception("Failed to run 'tar'!")
+			TARER.untarToDir(
+				absTarFilePath = srcTarFilePath,
+				absDestDirPath = destDirPath,
+				log = log2,
+			)
 	#
 
 	#
@@ -277,17 +267,27 @@ class Unpacker(object):
 			return toFilePath
 	#
 
+	@staticmethod
+	def listTarContents(
+			*args,
+			tarFilePath:str,
+			log:jk_logging.AbstractLogger,
+		) -> typing.List[str]:
+
+		if args:
+			raise Exception("Invoke this method with named arguments only!")
+
+		assert isinstance(tarFilePath, str)
+
+		# ----
+
+		tarFilePath = os.path.abspath(tarFilePath)
+		assert os.path.isfile(tarFilePath)
+
+		return TARER.listTarContents(tarFilePath, log)
+	#
+
 #
-
-
-
-
-
-
-
-
-
-
 
 
 

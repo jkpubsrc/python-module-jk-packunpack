@@ -19,7 +19,7 @@ setup(
 	author = "Jürgen Knauth",
 	author_email = "pubsrc@binary-overflow.de",
 	classifiers = [
-		"Development Status :: 5 - Production/Stable",
+		"Development Status :: 4 - Beta",
 		"Programming Language :: Python :: 3",
 	],
 	description = "Helper module to create or unpack tar archives, compress or uncompress files.",
@@ -41,8 +41,9 @@ setup(
 	name = "jk_packunpack",
 	packages = [
 		"jk_packunpack",
+		"jk_packunpack.impl",
 	],
-	version = "0.2022.2.20",
+	version = "0.2022.2.25",
 	zip_safe = False,
 	long_description = readme(),
 	long_description_content_type="text/markdown",
