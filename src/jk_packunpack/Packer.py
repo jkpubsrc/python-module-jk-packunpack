@@ -165,7 +165,7 @@ class Packer(object):
 					os.chmod(destTarFilePath, chModValueI)	# required as tar will not set the execute bit
 
 			if cmdResult.returnCode != 0:
-				cmdResult.dump(writeFunction=log2.error)
+				cmdResult.dump(printFunc=log2.error)
 				raise Exception("Failed to run 'tar'!")
 
 		return destTarFilePath
@@ -236,7 +236,7 @@ class Packer(object):
 					os.chmod(destTarFilePath, chModValueI)	# required as tar will not set the execute bit
 
 			if cmdResult.returnCode != 0:
-				cmdResult.dump(writeFunction=log2.error)
+				cmdResult.dump(printFunc=log2.error)
 				raise Exception("Failed to run 'tar'!")
 
 		# ----

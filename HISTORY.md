@@ -20,3 +20,7 @@
 
 * 2022-02-20
 	* Reduced log level from INFO to NOTICE
+
+* 2022-02-25
+	* Fixed wrong function invoked in case of error
+

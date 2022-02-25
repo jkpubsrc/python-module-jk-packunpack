@@ -108,7 +108,7 @@ class Unpacker1(object):
 			cmdResult = jk_simpleexec.invokeCmd(Unpacker1._TAR_PATH, tarArgs, workingDirectory=destDirPath)
 
 			if cmdResult.returnCode != 0:
-				cmdResult.dump(writeFunction=log2.error)
+				cmdResult.dump(printFunc=log2.error)
 				raise Exception("Failed to run 'tar'!")
 	#
 
