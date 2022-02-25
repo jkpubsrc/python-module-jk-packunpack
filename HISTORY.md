@@ -23,4 +23,5 @@
 
 * 2022-02-25
 	* Fixed wrong function invoked in case of error
+	* Moved to Python native tar support for compatibility to non-posix operating systems
 
