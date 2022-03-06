@@ -1,7 +1,7 @@
 ﻿
 
 
-__version__ = "0.2022.2.25"
+__version__ = "0.2022.3.6"
 
 
 
@@ -17,4 +17,3 @@ import os
 
 from .PythonNativeTar import PythonNativeTar
 TARER = PythonNativeTar()
-

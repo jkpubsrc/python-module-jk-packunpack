@@ -14,13 +14,23 @@ class SpoolInfo(jk_prettyprintobj.DumpMixin):
 	## Constructor
 	################################################################################################################################
 
-	def __init__(self, fromFilePath:str, toFilePath:str, compressionName:str, compressionFileExt:str, fromFileSize:int, toFileSize:int):
+	def __init__(self,
+			fromFilePath:str,
+			toFilePath:str,
+			compressionName:str,
+			compressionFileExt:str,
+			fromFileSize:int,
+			toFileSize:int,
+			duration:float = -1,
+		):
+
 		self.fromFilePath = fromFilePath
 		self.toFilePath = toFilePath
 		self.compressionName = compressionName
 		self.compressionFileExt = compressionFileExt
 		self.fromFileSize = fromFileSize
 		self.toFileSize = toFileSize
+		self.duration = duration
 	#
 
 	################################################################################################################################
@@ -65,6 +75,7 @@ class SpoolInfo(jk_prettyprintobj.DumpMixin):
 			"toFileSize",
 			"compressionRatio",
 			"decompressionRatio",
+			"duration",
 		]
 	#
 

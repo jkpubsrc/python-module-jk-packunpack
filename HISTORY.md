@@ -25,3 +25,11 @@
 	* Fixed wrong function invoked in case of error
 	* Moved to Python native tar support for compatibility to non-posix operating systems
 
+* 2022-03-01
+	* Improved inclusion/exclusion of files and directories for tar
+	* Added duration time measurement
+
+* 2022-03-06
+	* Added support for packing/unpacking ZIP files
+
+

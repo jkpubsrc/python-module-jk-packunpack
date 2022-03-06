@@ -5,14 +5,19 @@ import tarfile
 import gzip
 import bz2
 import lzma
+import time
+import re
+import zipfile
 
 import jk_simpleexec
 import jk_logging
 import jk_utils
+import jk_dirwalker
 
 from .Spooler import Spooler
 from .SpoolInfo import SpoolInfo
 from .impl import TARER
+from ._NameMatcher import _NameMatcher
 
 
 
@@ -111,6 +116,44 @@ class Packer(object):
 	################################################################################################################################
 
 	#
+	# This method selects files and directories (non-recursively) from the specified source directory.
+	#
+	# This is a helper method only. It is used by other method(s) such as <c>tarDirContents()</c> for filtering.
+	# However, it is quite useful for other purposes not related to compression. This is the reason why it is made
+	# public in this module though it is not related to compression in a strict sense.
+	#
+	@staticmethod
+	def selectFilesAndDirs(
+			dirPath:str,
+			filesAndDirsToInclude:typing.Iterable[typing.Union[str,re.Match]] = None,
+			filesAndDirsToExclude:typing.Iterable[typing.Union[str,re.Match]] = None,
+			bDebugIncludeExclude:bool = False,
+			log:jk_logging.AbstractLogger = None,
+		) -> typing.List[str]:
+
+		if bDebugIncludeExclude:
+			log.notice(":: filesAndDirsToInclude = " + str(filesAndDirsToInclude))
+			log.notice(":: filesAndDirsToExclude = " + str(filesAndDirsToExclude))
+
+		_includeMatcher = _NameMatcher(filesAndDirsToInclude, bDefaultIfNone=True)
+		_excludeMatcher = _NameMatcher(filesAndDirsToExclude, bDefaultIfNone=False)
+
+		entries = []
+		if bDebugIncludeExclude:
+			for fe in os.scandir(dirPath):
+				if _includeMatcher.matchDebug(fe.name, "include candidate", "exclude", log) \
+						and not _excludeMatcher.matchDebug(fe.name, "exclude", "don't exclude", log):
+					log.notice("-> including: " + fe.name)
+					entries.append(fe.name)
+		else:
+			for fe in os.scandir(dirPath):
+				if _includeMatcher.match(fe.name) and not _excludeMatcher.match(fe.name):
+					entries.append(fe.name)
+
+		return sorted(entries)
+	#
+
+	#
 	# Pack the contents of the specified directory in a tar file.
 	#
 	# @param	str srcDirPath						(required) The directory to pack
@@ -126,41 +169,47 @@ class Packer(object):
 			srcDirPath:str,
 			destTarFilePath:str,
 			chModValue:typing.Union[int,str,jk_utils.ChModValue,None] = None,
-			filesAndDirsToInclude:typing.List[str] = None,
+			filesAndDirsToInclude:typing.Iterable[typing.Union[str,re.Match]] = None,
+			filesAndDirsToExclude:typing.Iterable[typing.Union[str,re.Match]] = None,
 			log:jk_logging.AbstractLogger,
-		) -> str:
+			bDebugIncludeExclude:bool = False,
+		) -> typing.Union[str,None]:
 
 		if args:
 			raise Exception("Invoke this method with named arguments only!")
 
 		assert isinstance(srcDirPath, str)
 		assert isinstance(destTarFilePath, str)
-		if filesAndDirsToInclude is not None:
-			assert isinstance(filesAndDirsToInclude, (tuple,list))
-			for fn in filesAndDirsToInclude:
-				assert isinstance(fn, str)
-				assert fn
 		chModValue = jk_utils.ChModValue.createN(chModValue)
 		chModValueI = None if chModValue is None else chModValue.toInt()
 		assert isinstance(log, jk_logging.AbstractLogger)
+		assert isinstance(bDebugIncludeExclude, bool)
 
-		# ----
+		# ----------------------------------------------------------------
 
-		with log.descend("Packing " + repr(srcDirPath) + " ...", logLevel=jk_logging.EnumLogLevel.NOTICE) as log2:
+		with log.descend("Tar-Packing " + repr(srcDirPath) + " ...", logLevel=jk_logging.EnumLogLevel.NOTICE) as log2:
 			srcDirPath = os.path.abspath(srcDirPath)
 			assert os.path.isdir(srcDirPath)
 			destTarFilePath = os.path.abspath(destTarFilePath)
 
-			if filesAndDirsToInclude is None:
-				filesAndDirsToInclude = [ fe.name for fe in os.scandir(srcDirPath) ]
+			# --------
+			# create a flat list of file and directory names that are to include from srcDirPath
+
+			_selectedEntries = Packer.selectFilesAndDirs(srcDirPath, filesAndDirsToInclude, filesAndDirsToExclude, bDebugIncludeExclude, log2)
+			if not _selectedEntries:
+				log2.notice("No files and directories to include.")
+				return None
+
+			# --------
+			# do the packing
 
 			_oldmask = os.umask(0o777 ^ chModValueI) if chModValueI is not None else None
 			try:
 				TARER.tarDirContents(
 					destTarFilePath,
 					srcDirPath,
-					filesAndDirsToInclude,
-					log,
+					_selectedEntries,
+					log2,
 				)
 			finally:
 				if _oldmask is not None:
@@ -168,18 +217,179 @@ class Packer(object):
 					if os.path.isfile(destTarFilePath):
 						os.chmod(destTarFilePath, chModValueI)	# required as tar will not set the execute bit
 
-		# ----
+		# ----------------------------------------------------------------
 
 		return destTarFilePath
 	#
 
-	def isValidCompression(self, compression:str) -> bool:
+	#
+	# Pack the contents of the specified directory in a zip file.
+	#
+	# @param	str srcDirPath						(required) The directory to pack
+	# @param	str destZipFilePath					(required) The tar file to create
+	# @param	str[] filesAndDirsToInclude			(optional) The file and directorie names (without path!) to include.
+	#												If <c>None</c> is specified the source directory is scanned and all
+	#												files and directories found there will be included automatically.
+	# @param	AbstractLogger log					(required) A logger to write log information to
+	#
+	@staticmethod
+	def zipDirContents(
+			*args,
+			srcDirPath:str,
+			destZipFilePath:str,
+			chModValue:typing.Union[int,str,jk_utils.ChModValue,None] = None,
+			filesAndDirsToInclude:typing.Iterable[typing.Union[str,re.Match]] = None,
+			filesAndDirsToExclude:typing.Iterable[typing.Union[str,re.Match]] = None,
+			log:jk_logging.AbstractLogger,
+			bDebugIncludeExclude:bool = False,
+		) -> typing.Union[str,None]:
+
+		if args:
+			raise Exception("Invoke this method with named arguments only!")
+
+		assert isinstance(srcDirPath, str)
+		assert isinstance(destZipFilePath, str)
+		chModValue = jk_utils.ChModValue.createN(chModValue)
+		chModValueI = None if chModValue is None else chModValue.toInt()
+		assert isinstance(log, jk_logging.AbstractLogger)
+		assert isinstance(bDebugIncludeExclude, bool)
+
+		# ----------------------------------------------------------------
+
+		with log.descend("Zip-Packing " + repr(srcDirPath) + " ...", logLevel=jk_logging.EnumLogLevel.NOTICE) as log2:
+			srcDirPath = os.path.abspath(srcDirPath)
+			assert os.path.isdir(srcDirPath)
+			destZipFilePath = os.path.abspath(destZipFilePath)
+
+			# --------
+			# create a flat list of file and directory names that are to include from srcDirPath
+
+			_selectedEntries = Packer.selectFilesAndDirs(srcDirPath, filesAndDirsToInclude, filesAndDirsToExclude, bDebugIncludeExclude, log2)
+			if not _selectedEntries:
+				log2.notice("No files and directories to include.")
+				return None
+
+			# --------
+			# unfortunately the zipfile module does no recursive descend on its own. therefore we create a list of files to include into the
+			# ZIP file manually.
+
+			filesToIncludeRelPaths = []
+			w = jk_dirwalker.DirWalker(emitFilter = jk_dirwalker.StdEmitFilter.newFromDisabled(
+					emitRegularFiles = True,
+				),
+				raiseErrors = True,
+			)
+			for _selectedEntry in _selectedEntries:
+				_absPath = os.path.join(srcDirPath, _selectedEntry)
+				if os.path.isfile(_absPath):
+					# files
+					filesToIncludeRelPaths.append(_selectedEntry)
+				elif os.path.isdir(_absPath):
+					# directories
+					for x in w.scandir(_absPath):
+						filesToIncludeRelPaths.append(os.path.join(_selectedEntry, x.relFilePath))
+				else:
+					# ignore
+					pass
+
+			# --------
+			# do the packing
+
+			_oldmask = os.umask(0o777 ^ chModValueI) if chModValueI is not None else None
+			try:
+				with zipfile.PyZipFile(destZipFilePath, "w") as zipf:
+					for selectedEntry in filesToIncludeRelPaths:
+						assert isinstance(selectedEntry, str)
+						localFilePath = os.path.join(srcDirPath, selectedEntry.replace("/", os.path.sep))
+						log2.debug("Writing: " + localFilePath + " as " + selectedEntry)
+						zipf.write(localFilePath, selectedEntry)
+			finally:
+				if _oldmask is not None:
+					os.umask(_oldmask)
+					if os.path.isfile(destZipFilePath):
+						os.chmod(destZipFilePath, chModValueI)	# required as tar will not set the execute bit
+
+		# ----------------------------------------------------------------
+
+		return destZipFilePath
+	#
+
+	@staticmethod
+	def isValidCompression(compression:str) -> bool:
 		try:
 			Packer._getCompressionParams(compression)
 			return True
 		except:
 			return False
 	#
+
+	@staticmethod
+	def isAlreadyCompressed(filePath:str) -> bool:
+		fileName = os.path.basename(filePath)
+		_, fileExt = os.path.splitext(fileName)
+		if not fileExt:
+			return None
+
+		assert fileExt.startswith(".")
+		fileExt = fileExt[1:]
+
+		try:
+			Packer._getCompressionParams(fileExt)
+			return True
+		except:
+			return False
+	#
+
+	#
+	# Pack the contents of the specified directory.
+	#
+	# @param	str srcDirPath						(required) The directory to pack
+	# @param	str destTarFilePath					(required) The file to create
+	# @param	str packaging						(required) Either specify "tar" or "zip" here.
+	# @param	str[] filesAndDirsToInclude			(optional) The file and directorie names (without path!) to include.
+	#												If <c>None</c> is specified the source directory is scanned and all
+	#												files and directories found there will be included automatically.
+	# @param	AbstractLogger log					(required) A logger to write log information to
+	#
+	@staticmethod
+	def packDirContents(
+			*args,
+			srcDirPath:str,
+			destTarFilePath:str,
+			packing:str,
+			chModValue:typing.Union[int,str,jk_utils.ChModValue,None] = None,
+			filesAndDirsToInclude:typing.Iterable[typing.Union[str,re.Match]] = None,
+			filesAndDirsToExclude:typing.Iterable[typing.Union[str,re.Match]] = None,
+			log:jk_logging.AbstractLogger,
+			bDebugIncludeExclude:bool = False,
+		) -> typing.Union[str,None]:
+
+		if packing == "tar":
+			return Packer.tarDirContents(
+				*args,
+				srcDirPath=srcDirPath,
+				destTarFilePath=destTarFilePath,
+				chModValue=chModValue,
+				filesAndDirsToInclude=filesAndDirsToInclude,
+				filesAndDirsToExclude=filesAndDirsToExclude,
+				log=log,
+				bDebugIncludeExclude=bDebugIncludeExclude,
+			)
+		elif packing == "zip":
+			return Packer.zipDirContents(
+				*args,
+				srcDirPath=srcDirPath,
+				destZipFilePath=destTarFilePath,
+				chModValue=chModValue,
+				filesAndDirsToInclude=filesAndDirsToInclude,
+				filesAndDirsToExclude=filesAndDirsToExclude,
+				log=log,
+				bDebugIncludeExclude=bDebugIncludeExclude,
+			)
+		else:
+			raise Exception("Invalid packaging identifier specified: {}".format(packing))
+	#
+
 
 	#
 	# Compress the specified file.
@@ -247,7 +457,9 @@ class Packer(object):
 
 			# TODO: check if target file already exists
 
+			tStart = time.time()
 			m(filePath, toFilePath, chModValueI, terminationFlag)
+			tDuration = time.time() - tStart
 
 			resultFileSize = os.path.getsize(toFilePath)
 
@@ -258,7 +470,7 @@ class Packer(object):
 				if not os.path.isfile(filePath):
 					raise Exception("Implementation error!")
 
-			return SpoolInfo(filePath, toFilePath, compressionName, compressionFileExt, orgFileSize, resultFileSize)
+			return SpoolInfo(filePath, toFilePath, compressionName, compressionFileExt, orgFileSize, resultFileSize, tDuration)
 	#
 
 #

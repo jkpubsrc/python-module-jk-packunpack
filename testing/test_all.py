@@ -82,6 +82,42 @@ def testCompressionUncompression(
 	_assertFilesAreEquals(dirAFilePath, dirBFilePath, log)
 #
 
+def testPackingUnpacking(
+		packing:str,
+		inputDirPath:str,
+		outputDirPath1:str,
+		outputDirPath2:str,
+		log:jk_logging.AbstractLogger,
+	):
+
+	tarFilePath = jk_packunpack.Packer.packDirContents(
+		srcDirPath=inputDirPath,
+		destTarFilePath=os.path.join(outputDirPath1, "dirA.tar"),
+		packing=packing,
+		chModValue=FILE_CHMOD,
+		log=log,
+	)
+	Assert.isEqual(tarFilePath, os.path.join(outputDirPath1, "dirA.tar"))
+	_stats = os.stat(tarFilePath, follow_symlinks=False)
+	_mod = jk_utils.ChModValue(_stats.st_mode)
+	Assert.isEqual(_mod, FILE_CHMOD)
+	Assert.isEqual(set(jk_packunpack.Unpacker.listContents(
+		filePath=tarFilePath,
+		packing=packing,
+		log=log,
+	)), FILE_NAME_SET)
+
+	ret = jk_packunpack.Unpacker.unpackToDir(
+		srcFilePath=tarFilePath,
+		destDirPath=outputDirPath2,
+		packing=packing,
+		log=log,
+	)
+	Assert.isNone(ret)
+
+	for fileName in FILE_NAME_SET:
+		_assertFilesAreEquals(os.path.join(inputDirPath, fileName), os.path.join(outputDirPath2, fileName), log)
+#
 
 
 
@@ -98,8 +134,14 @@ with jk_logging.wrapMain() as log:
 	_recreateDir(dirA)
 	dirB = os.path.join(os.getcwd(), baseFileName + "-b")
 	_recreateDir(dirB)
-	dirC = os.path.join(os.getcwd(), baseFileName + "-c")
-	_recreateDir(dirC)
+	dirTar1 = os.path.join(os.getcwd(), baseFileName + "-tar1")
+	_recreateDir(dirTar1)
+	dirTar2 = os.path.join(os.getcwd(), baseFileName + "-tar2")
+	_recreateDir(dirTar2)
+	dirZip1 = os.path.join(os.getcwd(), baseFileName + "-zip1")
+	_recreateDir(dirZip1)
+	dirZip2 = os.path.join(os.getcwd(), baseFileName + "-zip2")
+	_recreateDir(dirZip2)
 
 	dirAFilePath = os.path.join(dirA, SOURCE_FILE_NAME)
 	shutil.copyfile(srcFilePath, dirAFilePath)
@@ -117,30 +159,9 @@ with jk_logging.wrapMain() as log:
 
 	#----
 
-	dirBTarFilePath = jk_packunpack.Packer.tarDirContents(
-		srcDirPath=dirA,
-		destTarFilePath=os.path.join(dirB, "dirA.tar"),
-		chModValue=FILE_CHMOD,
-		log=log,
-	)
-	Assert.isEqual(dirBTarFilePath, os.path.join(dirB, "dirA.tar"))
-	_stats = os.stat(dirBTarFilePath, follow_symlinks=False)
-	_mod = jk_utils.ChModValue(_stats.st_mode)
-	Assert.isEqual(_mod, FILE_CHMOD)
-	Assert.isEqual(set(jk_packunpack.Unpacker.listTarContents(
-		tarFilePath=dirBTarFilePath,
-		log=log,
-	)), FILE_NAME_SET)
+	testPackingUnpacking("tar", dirA, dirTar1, dirTar2, log)
 
-	ret = jk_packunpack.Unpacker.untarToDir(
-		srcTarFilePath=dirBTarFilePath,
-		destDirPath=dirC,
-		log=log,
-	)
-	Assert.isNone(ret)
-
-	for fileName in FILE_NAME_SET:
-		_assertFilesAreEquals(os.path.join(dirA, fileName), os.path.join(dirC, fileName), log)
+	testPackingUnpacking("zip", dirA, dirZip1, dirZip2, log)
 
 	#----
 

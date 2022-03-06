@@ -5,6 +5,7 @@ import tarfile
 import gzip
 import bz2
 import lzma
+import zipfile
 
 import jk_simpleexec
 import jk_logging
@@ -285,6 +286,123 @@ class Unpacker(object):
 		assert os.path.isfile(tarFilePath)
 
 		return TARER.listTarContents(tarFilePath, log)
+	#
+
+	@staticmethod
+	def listZipContents(
+			*args,
+			zipFilePath:str,
+			log:jk_logging.AbstractLogger,
+			bIncludeDirectories:bool = True,
+		) -> typing.List[str]:
+
+		if args:
+			raise Exception("Invoke this method with named arguments only!")
+
+		assert isinstance(zipFilePath, str)
+
+		# ----
+
+		zipFilePath = os.path.abspath(zipFilePath)
+		assert os.path.isfile(zipFilePath)
+
+		ret = set()
+		with zipfile.PyZipFile(zipFilePath, "r") as zipf:
+			for relPath in zipf.namelist():
+				ret.add(relPath)
+				if bIncludeDirectories:
+					if "\\" in relPath:
+						raise Exception("????")
+					if "/" in relPath:
+						ret.add(os.path.dirname(relPath))
+
+		return sorted(ret)
+	#
+
+	@staticmethod
+	def listContents(
+			*args,
+			filePath:str,
+			packing:str,
+			log:jk_logging.AbstractLogger,
+		) -> typing.List[str]:
+
+		if packing == "tar":
+			return Unpacker.listTarContents(
+				*args,
+				tarFilePath=filePath,
+				log=log,
+			)
+		elif packing == "zip":
+			return Unpacker.listZipContents(
+				*args,
+				zipFilePath=filePath,
+				log=log,
+			)
+		else:
+			raise Exception("Invalid packaging identifier specified: {}".format(packing))
+	#
+
+	#
+	# Untar the specified <c>zip</c> archive and write the contents to the specified directory.
+	#
+	# @param	str srcZipFilePath					(required) The tar archive to read
+	# @param	str destDirFilePath					(required) The target directory to unpack all data to
+	# @param	AbstractLogger log					(required) A logger to write log information to
+	#
+	@staticmethod
+	def unzipToDir(
+			*args,
+			srcZipFilePath:str,
+			destDirPath:str,
+			log:jk_logging.AbstractLogger,
+		) -> None:
+
+		if args:
+			raise Exception("Invoke this method with named arguments only!")
+
+		assert isinstance(srcZipFilePath, str)
+		assert os.path.isfile(srcZipFilePath)
+		assert isinstance(destDirPath, str)
+		assert isinstance(log, jk_logging.AbstractLogger)
+
+		# ----
+
+		absDestDirPath = os.path.abspath(destDirPath)
+
+		with log.descend("Unpacking " + repr(srcZipFilePath) + " ...", logLevel=jk_logging.EnumLogLevel.NOTICE) as log2:
+			srcZipFilePath = os.path.abspath(srcZipFilePath)
+			assert os.path.isfile(srcZipFilePath)
+
+			with zipfile.PyZipFile(srcZipFilePath, "r") as zipf:
+				return zipf.extractall(absDestDirPath)
+	#
+
+	@staticmethod
+	def unpackToDir(
+			*args,
+			srcFilePath:str,
+			destDirPath:str,
+			packing:str,
+			log:jk_logging.AbstractLogger,
+		) -> None:
+
+		if packing == "tar":
+			Unpacker.untarToDir(
+				*args,
+				srcTarFilePath=srcFilePath,
+				destDirPath=destDirPath,
+				log=log,
+			)
+		elif packing == "zip":
+			Unpacker.unzipToDir(
+				*args,
+				srcZipFilePath=srcFilePath,
+				destDirPath=destDirPath,
+				log=log,
+			)
+		else:
+			raise Exception("Invalid packaging identifier specified: {}".format(packing))
 	#
 
 #

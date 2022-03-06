@@ -28,6 +28,7 @@ setup(
 		"jk_simpleexec",
 		"jk_logging",
 		"jk_prettyprintobj",
+		"jk_dirwalker",
 	],
 	keywords = [
 		"gz",
@@ -43,7 +44,7 @@ setup(
 		"jk_packunpack",
 		"jk_packunpack.impl",
 	],
-	version = "0.2022.2.25",
+	version = "0.2022.3.6",
 	zip_safe = False,
 	long_description = readme(),
 	long_description_content_type="text/markdown",
