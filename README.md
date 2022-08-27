@@ -8,7 +8,7 @@ Helper module to create or unpack tar archives, compress or uncompress files.
 
 Information about this module can be found here:
 
-* [github.org](https://github.com/jkpubsrc/python-module-jk-packunpack)
+* [github.com](https://github.com/jkpubsrc/python-module-jk-packunpack)
 * [pypi.python.org](https://pypi.python.org/pypi/jk_packunpack)
 
 Why this module?
