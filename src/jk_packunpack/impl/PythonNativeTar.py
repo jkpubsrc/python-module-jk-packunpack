@@ -45,10 +45,15 @@ class PythonNativeTar(object):
 	# An exception is raised on error.
 	# Before an error is raised the logger may be used to provide a more detailed error message.
 	#
-	# @param	str absDestTarFilePath			The (absolute) output file path
-	# @param	str absSrcDirPath				The (absolute) source directory that contains all files and subdirectories to include
-	# @param	str[] filesAndDirsToInclude		The files and directory names to include
-	# @param	AbstractLogger log				The logger to use (if there is anything to log, e.g. error information)
+	# @param	str absDestTarFilePath				The (absolute) output file path
+	# @param	str absSrcDirPath					The (absolute) source directory that contains all files and subdirectories to include
+	# @param	str[] filesAndDirsToInclude			The files and directory names to include
+	# @param	AbstractLogger log					The logger to use (if there is anything to log, e.g. error information)
+	# @param	Callable[TarInfo]:TarInfo filter	(optional) An optional filter function that is directly passed on to the
+	#												python tarfile API. This filter function receives a TarInfo record of
+	#												the current file to pack and can either return the same or a modified
+	#												version of the TarInfo record or None to indicate that
+	#												this entry should be excluded.
 	#
 	@jk_typing.checkFunctionSignature()
 	def tarDirContents(
@@ -57,12 +62,14 @@ class PythonNativeTar(object):
 			absSrcDirPath:str,
 			filesAndDirsToInclude:typing.List[str],
 			log:jk_logging.AbstractLogger,
+			*,
+			filter:typing.Callable[[tarfile.TarInfo],typing.Union[tarfile.TarInfo,None]] = None,
 		) -> None:
 
 		with tarfile.open(absDestTarFilePath, "w") as tarOut:
 			for fileName in filesAndDirsToInclude:
 				srcFilePath = os.path.join(absSrcDirPath, fileName)
-				tarOut.add(srcFilePath, fileName, recursive=True)
+				tarOut.add(srcFilePath, fileName, recursive=True, filter=filter)
 	#
 
 	def listTarContents(

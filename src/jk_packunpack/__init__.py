@@ -1,8 +1,9 @@
-﻿
 
 
-__version__ = "0.2022.3.6"
+
 __api_version__ = 2
+__author__ = "Jürgen Knauth"
+__version__ = "0.2022.10.25"
 
 
 

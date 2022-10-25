@@ -6,3 +6,4 @@ src/build/
 .vscode
 examples/*.log
 testing/test_all-*
+**/*.bak

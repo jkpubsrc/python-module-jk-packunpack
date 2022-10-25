@@ -32,4 +32,6 @@
 * 2022-03-06
 	* Added support for packing/unpacking ZIP files
 
+* 2022-10-25
+	* Added: filtering
 

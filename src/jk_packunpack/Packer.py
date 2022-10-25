@@ -162,6 +162,11 @@ class Packer(object):
 	#												If <c>None</c> is specified the source directory is scanned and all
 	#												files and directories found there will be included automatically.
 	# @param	AbstractLogger log					(required) A logger to write log information to
+	# @param	Callable[TarInfo]:TarInfo filter	(optional) An optional filter function that is directly passed on to the
+	#												python tarfile API. This filter function receives a TarInfo record of
+	#												the current file to pack and can either return the same or a modified
+	#												version of the TarInfo record or None to indicate that
+	#												this entry should be excluded.
 	#
 	@staticmethod
 	def tarDirContents(
@@ -171,6 +176,7 @@ class Packer(object):
 			chModValue:typing.Union[int,str,jk_utils.ChModValue,None] = None,
 			filesAndDirsToInclude:typing.Iterable[typing.Union[str,re.Match]] = None,
 			filesAndDirsToExclude:typing.Iterable[typing.Union[str,re.Match]] = None,
+			filter:typing.Callable[[tarfile.TarInfo],typing.Union[tarfile.TarInfo,None]] = None,
 			log:jk_logging.AbstractLogger,
 			bDebugIncludeExclude:bool = False,
 		) -> typing.Union[str,None]:
@@ -210,6 +216,7 @@ class Packer(object):
 					srcDirPath,
 					_selectedEntries,
 					log2,
+					filter=filter,
 				)
 			finally:
 				if _oldmask is not None:

@@ -1,67 +1,49 @@
 {
 	"magic": {
 		"magic": "packageinfo",
-		"version": 2,
+		"version": 2
 	},
 	"meta": {
-		"name": "jk_packunpack",
-		"version": "0.2022.3.6",
-		"packageClass": "python-module",
-		"language": "python3",
-		"development_status": "beta",
-		"license": "proprietary",
-		"keywords": [
-			"gz", "gzip", "tar", "bz2", "bzip", "xz"
-		],
-		"description": "Helper module to create or unpack tar archives, compress or uncompress files.",
 		"authors": [
 			{
-				"name": "Jürgen Knauth",
-				"email": "pubsrc@binary-overflow.de"
+				"email": "pubsrc@binary-overflow.de",
+				"name": "J\u00fcrgen Knauth"
 			}
 		],
+		"description": "Helper module to create or unpack tar archives, compress or uncompress files.",
+		"development_status": "beta",
+		"keywords": [
+			"gz",
+			"gzip",
+			"tar",
+			"bz2",
+			"bzip",
+			"xz"
+		],
+		"language": "python3",
+		"license": "proprietary",
+		"name": "jk_packunpack",
+		"packageClass": "python-module",
+		"version": "0.2022.10.25"
 	},
 	"requirements": {
+		"htmlcssjs_packages": [],
 		"python_packages": [
 			"jk_simpleexec",
 			"jk_logging",
 			"jk_prettyprintobj",
-			"jk_dirwalker",
+			"jk_dirwalker"
 		],
-		"python_packages_dev": [
-		],
-		"system_apt_packages": [
-		],
+		"python_packages_dev": [],
+		"python_packages_recommended": [],
+		"system_apt_packages": []
 	},
 	"source": {
+		"extra_binary_files": [],
+		"extra_data_files": [],
 		"packages": [
 			"jk_packunpack",
-			"jk_packunpack.impl",
-		],
-		"extra_data_files": [
-		],
-		"extra_binary_files": [
+			"jk_packunpack.impl"
 		]
-	},
-	"documentation": [
-		/*
-		"wiki": {
-			"page": "DevDocs:jk_packunpack"
-		}
-		*/
-	],
-	"repositories": [
-		{
-			"type": "github",
-			"user": "jkpubsrc",
-			"project": "........",
-			"devon_publish": false
-		},
-		{
-			"type": "pypi",
-			"project": "........",
-			"devon_publish": false
-		}
-	],
+	}
 }
-

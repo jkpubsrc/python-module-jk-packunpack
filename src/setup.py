@@ -23,7 +23,7 @@ setup(
 		"Programming Language :: Python :: 3",
 	],
 	description = "Helper module to create or unpack tar archives, compress or uncompress files.",
-	include_package_data = False,
+	include_package_data = True,
 	install_requires = [
 		"jk_simpleexec",
 		"jk_logging",
@@ -40,12 +40,18 @@ setup(
 	],
 	license = "proprietary",
 	name = "jk_packunpack",
+	package_data = {
+		"": [
+		],
+	},
 	packages = [
 		"jk_packunpack",
 		"jk_packunpack.impl",
 	],
-	version = "0.2022.3.6",
+	scripts = [
+	],
+	version = '0.2022.10.25',
 	zip_safe = False,
 	long_description = readme(),
-	long_description_content_type="text/markdown",
+	long_description_content_type = "text/markdown",
 )
